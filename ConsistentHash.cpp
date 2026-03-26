@@ -131,7 +131,7 @@ class ConsistentHash {
                 }
             } else {
                 for (auto it = dataMap[nextMachineHash].begin(); it != dataMap[nextMachineHash].end();) {
-                    if (it->second <= hash || it->second < nextMachineHash) {
+                    if (it->second <= hash || it->second >previousMachineHash) {
                         dataMap[hash].insert(*it);
                         it = dataMap[nextMachineHash].erase(it);
                     } else {
@@ -187,7 +187,7 @@ class ConsistentHash {
       if (dataMap.find(hash) == dataMap.end() || dataMap[hash].size() == 0) {
           return;
       }
-      int nextHash = getNextHash(hash);
+      int nextHash = getNextHash((hash+1)%INT_MAX);
       dataMap[nextHash].merge(dataMap[hash]);
       machineIds.erase(machineId);
       dataMap[hash].clear();
@@ -216,6 +216,50 @@ class ConsistentHash {
       int hash = getHash(dataValue);
       int nextMachineHash = getNextHash(hash);
       dataMap[nextMachineHash].erase({dataValue, hash});
+   }
+
+   // 获取当前状态信息
+   std::string getStatus() const {
+      std::string result;
+      result += "Machine count: " + std::to_string(machines.size()) + "\n";
+      result += "Machines (sorted by hash): ";
+      for (size_t i = 0; i < machines.size(); ++i) {
+          result += std::to_string(machines[i]);
+          if (i < machines.size() - 1) {
+              result += ", ";
+          }
+      }
+      result += "\n";
+      
+      int totalData = 0;
+      for (const auto& pair : dataMap) {
+          totalData += pair.second.size();
+          result += "Machine " + std::to_string(pair.first) + ": " + 
+                  std::to_string(pair.second.size()) + " items\n";
+      }
+      result += "Total data items: " + std::to_string(totalData) + "\n";
+      return result;
+   }
+
+   // 获取机器列表
+   std::vector<int> getMachines() const {
+      return machines;
+   }
+
+   // 获取数据分布情况
+   std::string getDataDistribution() const {
+      std::string result;
+      for (const auto& machinePair : dataMap) {
+          int machineHash = machinePair.first;
+          const auto& dataSet = machinePair.second;
+          result += "Machine " + std::to_string(machineHash) + ":\n";
+          for (const auto& dataItem : dataSet) {
+              result += "  Data: " + std::to_string(dataItem.first) + 
+                      ", Hash: " + std::to_string(dataItem.second) + "\n";
+          }
+          result += "\n";
+      }
+      return result;
    }
 
 
